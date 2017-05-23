@@ -1,0 +1,15 @@
+1. Innovations in React and Flux
+===================
+
+* Unique qualities React has to offer:
+  - JSX - writing markup (HTML) in JavaScript.
+  - Virtual DOM - minimizes expensive updates to the DOM. React => Virtual DOM => DOM.
+                When UI changes, React compares the old state with the new state in memory and ten updates the DOM in the least expensive way.
+  - Isomorphic Rendering - allows to render the React components on both Client and Server. 
+  - Unidirectional Flows (Flux) - data flows are handled in a single direction using the centralized dispatcher.
+
+* React and Flux deliberately ignore some commonly held best practices:
+  - HTML should be a projection of app state, not a source of truth, i.e. data shouldn't be stored in DOM.
+  - JavaScript and HTML belong in the same file (JSX).
+  - Unidirectional flow. No two-way binding.
+  - Inline styles can be good.
