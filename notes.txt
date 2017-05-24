@@ -1,11 +1,11 @@
-1. Innovations in React and Flux
+1. Intro - Innovations in React and Flux
 ===================
 
 * Unique qualities React has to offer:
   - JSX - writing markup (HTML) in JavaScript.
   - Virtual DOM - minimizes expensive updates to the DOM. React => Virtual DOM => DOM.
                 When UI changes, React compares the old state with the new state in memory and ten updates the DOM in the least expensive way.
-  - Isomorphic Rendering - allows to render the React components on both Client and Server. 
+  - Isomorphic Rendering - allows to render the React components on both Client and Server.
   - Unidirectional Flows (Flux) - data flows are handled in a single direction using the centralized dispatcher.
 
 * React and Flux deliberately ignore some commonly held best practices:
@@ -13,3 +13,211 @@
   - JavaScript and HTML belong in the same file (JSX).
   - Unidirectional flow. No two-way binding.
   - Inline styles can be good.
+
+
+
+2. Environment Setup
+===================
+
+>npm init
+>npm install --save gulp@3.9.0 gulp-connect@2.2.0 gulp-open@1.0.0
+>npm install --save browserify@11.0.1 reactify@1.1.1 vinyl-source-stream@1.1.0
+>npm install --save bootstrap@3.3.5 jquery@2.1.4 gulp-concat@2.6.0
+>npm install --save gulp-eslint@0.15.0
+>npm install --save react@0.13.3 react-router@0.13.3 flux@2.0.3
+>npm run gulp
+
+
+package.json
+----
+{
+  "name": "react-flux-building-applications",
+  "version": "1.0.0",
+  "description": "Building Applications with React and Flux Pluralsight course by Cory House",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "gulp": "gulp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RockingChewee/react-flux-building-applications.git"
+  },
+  "author": "Aleksandr Fokin",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/RockingChewee/react-flux-building-applications/issues"
+  },
+  "homepage": "https://github.com/RockingChewee/react-flux-building-applications#readme",
+  "dependencies": {
+    "bootstrap": "^3.3.5",
+    "browserify": "^11.0.1",
+    "flux": "^2.0.3",
+    "gulp": "^3.9.0",
+    "gulp-concat": "^2.6.0",
+    "gulp-connect": "^2.2.0",
+    "gulp-eslint": "^0.15.0",
+    "gulp-open": "^1.0.0",
+    "jquery": "^2.1.4",
+    "react": "^0.13.3",
+    "react-router": "^0.13.3",
+    "reactify": "^1.1.1",
+    "vinyl-source-stream": "^1.1.0"
+  }
+}
+
+
+gulpfile.js
+----
+"use strict";
+
+var gulp = require('gulp');
+var connect = require('gulp-connect'); // Runs a local dev server
+var open = require('gulp-open'); // Opens a URL in a web browser
+var browserify = require('browserify'); // Bundles JS, uses CommonJS package pattern
+var reactify = require('reactify'); // Transforms React JSX to JS
+var source = require('vinyl-source-stream'); // Use conventional text streams with Gulp
+var concat = require('gulp-concat'); // Concatinates files
+var lint = require('gulp-eslint'); // Lint JS files, including JSX
+
+var config = {
+    devBaseUrl: 'http://localhost',
+    port: 9005,
+    paths: {
+        html: './src/*.html',
+        js: './src/**/*.js',
+        css: [
+          'node_modules/bootstrap/dist/css/bootstrap.min.css',
+          'node_modules/bootstrap/dist/css/bootstrap-theme.min.css'
+        ],
+        dist: './dist',
+        mainJs: './src/main.js'
+    }
+}
+
+// Start a local development server
+gulp.task('connect', function() {
+  connect.server({
+    root: ['dist'],
+    base: config.devBaseUrl,
+    port: config.port,
+    livereload: true
+  });
+});
+
+gulp.task('open', ['connect'], function() {
+  gulp.src('dist/index.html')
+    .pipe(open({ uri: config.devBaseUrl + ':' + config.port + '/'}));
+});
+
+gulp.task('html', function() {
+  gulp.src(config.paths.html)
+    .pipe(gulp.dest(config.paths.dist))
+    .pipe(connect.reload());
+});
+
+gulp.task('js', function() {
+  browserify(config.paths.mainJs)
+    .transform(reactify)
+    .bundle()
+    .on('error', console.error.bind(console))
+    .pipe(source('bundle.js'))
+    .pipe(gulp.dest(config.paths.dist + '/scripts'))
+    .pipe(connect.reload());
+});
+
+gulp.task('css', function() {
+  gulp.src(config.paths.css)
+    .pipe(concat('bundle.css'))
+    .pipe(gulp.dest(config.paths.dist + '/css'));
+});
+
+gulp.task('lint', function() {
+  return gulp.src(config.paths.js)
+    .pipe(lint({config: 'eslint.config.json'}))
+    .pipe(lint.format());
+});
+
+gulp.task('watch', function() {
+  gulp.watch(config.paths.html, ['html']);
+  gulp.watch(config.paths.js, ['js', 'lint']);
+});
+
+gulp.task('default', ['html', 'js', 'css', 'lint', 'open', 'watch']);
+
+
+index.HTML
+----
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Pluralsight Administration</title>
+    <link rel="stylesheet" href="css/bundle.css" />
+  </head>
+  <body>
+    <div class="jumbotron">
+      <h1>Hello world from Bootstrap</h1>
+    </div>
+    <div id="app"></div>
+    <script src="scripts/bundle.js"></script>
+  </body>
+</html>
+
+
+main.js
+----
+$ = jQuery = require('jquery'); // Bootstrap expects jquery to be in a global namespace
+
+var App = console.log('Hello world from Browserify');
+
+module.exports = App;
+
+
+eslint.config.json - http://github.com/coryhouse/react-flux-starter-kit/blob/master/eslint.config.json
+----
+{
+  "root": true,
+  "ecmaFeatures": {
+    "jsx": true
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "jquery": true
+  },
+  "rules": {
+    "quotes": 0,
+    "no-trailing-spaces": 0,
+    "eol-last": 0,
+    "no-unused-vars": 0,
+    "no-underscore-dangle": 0,
+    "no-alert": 0,
+    "no-lone-blocks": 0
+  },
+  "globals": {
+    "jQuery": true,
+    "$": true
+  }
+}
+
+
+.editorconfig
+----
+#editorconfig.org
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.md]
+trim_trailing_whitespace = false
+
+
+
+3.
+===================
