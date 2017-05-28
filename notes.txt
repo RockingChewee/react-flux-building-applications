@@ -219,5 +219,68 @@ trim_trailing_whitespace = false
 
 
 
-3.
+3. React Core Concepts
+===================
+
+* Why React?
+  - Fast - Virtual DOM
+  - Composable - nested components, data passing via props
+  - Pluggable - easily integrated with other technologies
+  - Isomorphic Friendly - rendering may happen on both client or server
+  - Simple - API is small and moving parts are not a lot
+  - Battle Proven - used by Facebook and lot of others
+
+* React and MVC
+  - In actuality, a well composed React components fulfil both V and C, called Controller Views.
+    Controller Views promote reuse and separation of concern.
+
+* The risk of two-way binding (used by alternatives e.g. Knockout, Angular, ember)
+
+  Simply put, when UI change, a corresponding model change needs to be triggered and vise versa - a model change needs to be reflected in UI.
+  These are hard to predict and follow in a complex applications.
+
+  - Pros
+    ~ Simple way to eliminate boiler plate
+    ~ Quickly deliver applications
+
+  - Cons
+    ~ Unpredictable interactions
+    ~ Cascading updates
+    ~ Tricky debugging
+
+* JSX
+  - "HTML" in JavaScript - this is not actual HTML, but it compiles down to JavaScript, which produces HTML
+  - Defferences: 'className' instead of 'class', 'htmlFor' instead of 'for'
+  - Optional - there is no enforcement to use it, can just use JavaScript instead
+  - Example: <h1 color="red">Heading here</h1>  ==> React.createElement("h1", {color: red}, "Heading here")
+  - JSX-friendly editors: Sublime (plugin), WebStorm, Brackets, Atom, Visual Studio 2015
+
+* HTML in JS: A Justification
+  - The popular mindset is to inject JS into HTML (Knockout, Angular, ember) and React does the exact opposite - injects HTML into JS.
+    In other words, from architecture point of view this is not very different.
+  - HTML and JS must be carefully kept in sync, but there is no explicit interface between HTML and JavaScript to with regards to separation of concerns.
+  - In JS we enjoy the clear error messages, which point us to the line number where the error occurred, but HTML usually silently fails.
+  - The conclusion is that HTML and JS are totally intertwined concerns and putting them into separate files fails to really separate them.
+
+* Understanding of Virtual DOM
+
+  - Story:
+    It is a lot of work for photo-stage setup to put all the lights to the correct spot. When the setup slightly changes, it is much more efficient
+    to just move some lights around, rather than tearing them down and blindly rebuilding the stage from scratch.
+
+  - Behind the scenes:
+    ~ React compares the current state of the DOM to the new desired state and determines the most efficient way to update the physical DOM.
+    ~ The comparison happens in-memory, so it is typically very fast.
+    ~ React monitors each component state.
+
+  - Performance tweaks:
+    ~ By declaring shouldComponentUpdate() method in React components, which may contain manual logic considering whether to update the DOM even if the model changes.
+    ~ PureRenderMixin + immutability - allows reference comparisons
+    ~ Synthetic Events - React may optimize the way event handlers are attached behind the scenes
+    ~ Isomorphic Support - rendering may be done on a server (will not be covered in this course)
+    ~ React Native - since React abstracts the DOM, it can be used for Native (mobile) applications (will not be covered in this course)
+
+
+
+4. Creating Components
 ===================
