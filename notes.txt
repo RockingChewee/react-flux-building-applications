@@ -253,7 +253,7 @@ trim_trailing_whitespace = false
   - Defferences: 'className' instead of 'class', 'htmlFor' instead of 'for'
   - Optional - there is no enforcement to use it, can just use JavaScript instead
   - Example: <h1 color="red">Heading here</h1>  ==> React.createElement("h1", {color: red}, "Heading here")
-  - JSX-friendly editors: Sublime (plugin), WebStorm, Brackets, Atom, Visual Studio 2015
+  - JSX-friendly editors: Sublime (plugin), WebStorm, Brackets, Atom, Visual Studio 2015, VSCode
 
 * HTML in JS: A Justification
   - The popular mindset is to inject JS into HTML (Knockout, Angular, ember) and React does the exact opposite - injects HTML into JS.
@@ -282,5 +282,192 @@ trim_trailing_whitespace = false
 
 
 
-4. Creating Components
+4. Creating React Components
+===================
+
+* Creating of React component in ES5: React.createClass() {}
+* Each react component has to have a render() function. This function returns the JSX that is to be visible on the screen.
+  The known restriction is that this function may not return 2 elements on the highest level, i.e. if 2 are needed - those can be wrapped into div.
+* The React.render() has to be invoked in the main js file in order to inject the React components into main html.
+  This method accepts the component name that is the highest in hierarchy and a DOM element, to which this component needs to be attached to.
+* To workaround the defining of the jquery variable in the global namespace and usage of 'use strict' the IIFE can be used.
+  In this case, the main js logic is wrapped into the IIFE and the first line inside the IIFE is 'use strict'.
+  IIFE - an Immediately-Invoked Function Expression, which executes immediately after it’s created and  looks like (function(){...})().
+* Naming React Files:
+  - ChatApp.react.js
+  - ChatApp.jsx
+  - ChatApp.js
+  Preferable approach is to use .js extension, since this appears to be least confusing for the operating systems and JS IDE's to correctly recognize those files.
+
+
+src/components/homePage.js
+----
+"use strict";
+
+var React = require('react');
+
+var Home = React.createClass({
+  render: function() {
+    return (
+      <div className="jumbotron">
+        <h1>Pluralsight Administration</h1>
+        <p>React, React Router, and Flux for ultra-responsive web apps.</p>
+      </div>
+    );
+  }
+});
+
+module.exports = Home;
+
+
+src/main.js
+----
+//"use strict"; // Cannot 'use strict' here due to the need of having the jquery variable in a global namespace. This is workarounded by using IIFE.
+$ = jQuery = require('jquery'); // Bootstrap expects jquery to be in a global namespace
+
+var React = require('react');
+var Home = require('./components/homePage');
+var About = require('./components/about/aboutPage');
+var Header = require('./components/common/header');
+
+(function(win) { // an IIFE to workaround the 'use strict' and jquery global variable collision
+
+  "use strict";
+
+  var App = React.createClass({
+    render: function() {
+      var Child;
+      switch(this.props.route) { // capturing the attribute values passed over by the parent component (this.props)
+        case 'about': Child = About; break;
+        default: Child = Home;
+      }
+
+      return (
+        <div>
+          <Header/>
+          <Child/>
+        </div>
+      );
+    }
+  });
+
+  function render() {
+    var route = win.location.hash.substr(1); // 'window' to 'win', since 'win' is passed to the IIFE
+    React.render(<App route={route} />, document.getElementById('app')); // passing props to the child component
+  }
+
+  win.addEventListener('hashchange', render); // Event that occurres when there is a hash change in the URL, e.g. http://localhost:9005/#about
+  render();
+
+})(window);
+
+
+src/index.html
+----
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Pluralsight Administration</title>
+    <link rel="stylesheet" href="css/bundle.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="scripts/bundle.js"></script>
+  </body>
+</html>
+
+
+src/about/aboutPage.js
+----
+"use strict";
+
+var React = require('react');
+
+var Home = React.createClass({
+  render: function() {
+    return (
+      <div className="jumbotron">
+        <h1>About</h1>
+        <p>
+          This application uses the following technologies:
+          <ul>
+            <li>React</li>
+            <li>React Router</li>
+            <li>Flux</li>
+            <li>Node</li>
+            <li>Gulp</li>
+            <li>Browserify</li>
+            <li>Bootstrap</li>
+          </ul>
+        </p>
+      </div>
+    );
+  }
+});
+
+module.exports = Home;
+
+
+src/components/common/header.js
+----
+"use strict";
+
+var React = require('react');
+
+var Header = React.createClass({
+  render: function() {
+    return (
+      <nav className="navbar navbar-default">
+        <div className="container-fluid">
+          <a href="/" className="navbar-brand">
+            <img src="images/pluralsight-logo.png" />
+          </a>
+          <ul className="nav navbar-nav">
+            <li><a href="/">Home</a></li>
+            <li><a href="/#about">About</a></li>
+          </ul>
+        </div>
+      </nav>
+    );
+  }
+});
+
+module.exports = Header;
+
+
+src/images/pluralsight-logo.png
+----
+
+
+favicon.ico
+----
+
+
+gulpfile.js
+----
+...
+var config = {
+    ...
+    paths: {
+        ...
+        images: './src/images/*',
+        ...
+    }
+}
+...
+// Migrates images to dist folder
+// Note that I could even optimize my images here
+gulp.task('images', function() {
+  gulp.src(config.paths.images)
+    .pipe(gulp.dest(config.paths.dist + '/images'))
+    .pipe(connect.reload());
+
+  //publish favicon
+  gulp.src('./src/favicon.ico')
+    .pipe(gulp.dest(config.paths.dist)); // this is where browsers usually request favicon.ico from (the root of the website)
+});
+
+
+
+5. React Lifecycle
 ===================

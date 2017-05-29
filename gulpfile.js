@@ -19,6 +19,7 @@ var config = {
           'node_modules/bootstrap/dist/css/bootstrap.min.css',
           'node_modules/bootstrap/dist/css/bootstrap-theme.min.css'
         ],
+        images: './src/images/*',
         dist: './dist',
         mainJs: './src/main.js'
     }
@@ -47,7 +48,7 @@ gulp.task('html', function() {
 
 gulp.task('js', function() {
   browserify(config.paths.mainJs)
-    .transform(reactify)
+    .transform(reactify) // for JSX transpiling
     .bundle()
     .on('error', console.error.bind(console))
     .pipe(source('bundle.js'))
@@ -61,6 +62,18 @@ gulp.task('css', function() {
     .pipe(gulp.dest(config.paths.dist + '/css'));
 });
 
+// Migrates images to dist folder
+// Note that I could even optimize my images here
+gulp.task('images', function() {
+  gulp.src(config.paths.images)
+    .pipe(gulp.dest(config.paths.dist + '/images'))
+    .pipe(connect.reload());
+
+  //publish favicon
+  gulp.src('./src/favicon.ico')
+    .pipe(gulp.dest(config.paths.dist)); // this is where browsers usually request favicon.ico from (the root of the website)
+});
+
 gulp.task('lint', function() {
   return gulp.src(config.paths.js)
     .pipe(lint({config: 'eslint.config.json'}))
@@ -72,4 +85,4 @@ gulp.task('watch', function() {
   gulp.watch(config.paths.js, ['js', 'lint']);
 });
 
-gulp.task('default', ['html', 'js', 'css', 'lint', 'open', 'watch']);
+gulp.task('default', ['html', 'js', 'css', 'images', 'lint', 'open', 'watch']);
