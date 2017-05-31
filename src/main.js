@@ -3,6 +3,7 @@ $ = jQuery = require('jquery'); // Bootstrap expects jquery to be in a global na
 
 var React = require('react');
 var Home = require('./components/homePage');
+var Authors = require('./components/authors/authorPage');
 var About = require('./components/about/aboutPage');
 var Header = require('./components/common/header');
 
@@ -14,6 +15,7 @@ var Header = require('./components/common/header');
     render: function() {
       var Child;
       switch(this.props.route) { // capturing the attribute values passed over by the parent component (this.props)
+        case 'authors' : Child = Authors; break;
         case 'about': Child = About; break;
         default: Child = Home;
       }

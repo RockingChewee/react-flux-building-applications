@@ -25,6 +25,7 @@
 >npm install --save bootstrap@3.3.5 jquery@2.1.4 gulp-concat@2.6.0
 >npm install --save gulp-eslint@0.15.0
 >npm install --save react@0.13.3 react-router@0.13.3 flux@2.0.3
+>npm install --save lodash
 >npm run gulp
 
 
@@ -59,6 +60,7 @@ package.json
     "gulp-eslint": "^0.15.0",
     "gulp-open": "^1.0.0",
     "jquery": "^2.1.4",
+    "lodash": "^4.17.4",
     "react": "^0.13.3",
     "react-router": "^0.13.3",
     "reactify": "^1.1.1",
@@ -287,7 +289,7 @@ trim_trailing_whitespace = false
 
 * Creating of React component in ES5: React.createClass() {}
 * Each react component has to have a render() function. This function returns the JSX that is to be visible on the screen.
-  The known restriction is that this function may not return 2 elements on the highest level, i.e. if 2 are needed - those can be wrapped into div.
+  This function may not return 2 elements on the top level, i.e. if 2 are needed - those must be wrapped into single top level element, e.g. div.
 * The React.render() has to be invoked in the main js file in order to inject the React components into main html.
   This method accepts the component name that is the highest in hierarchy and a DOM element, to which this component needs to be attached to.
 * To workaround the defining of the jquery variable in the global namespace and usage of 'use strict' the IIFE can be used.
@@ -470,4 +472,189 @@ gulp.task('images', function() {
 
 
 5. React Lifecycle
+===================
+
+* Data of React components is held in 2 places:
+  - Props - this.props.username
+    ~ Used to pass the data down to the child components. Look like HTML attributes, but immutable, i.e. owned by the parent.
+    ~ getDefaultProps() - an optional function which can be used to define values for properties of the component in case parent component doesn't declare the values.
+  - State - this.state.username
+    ~ Holds mutable state of the React component.
+      Strive to use it only in the Controller View, i.e. only use state on a top level component and pass data down to child components via props.
+    ~ getInitialState() - an optional function which sets the initial state for the component, typically in the top level component called Controller View.
+
+* React Component Lifecycle:
+  - componentWillMount
+    When: Before initial render, both client and server.
+    Why: Good spot to set initial state.
+  - componentDidMount
+    When: After render, i.e. by this time the component is rendered in the DOM.
+    Why: Access DOM, integrate with frameworks, set timers, AJAX requests.
+  - componentWillReceiveProps
+    When: When receiving new props, i.e. when properties are chaged. Not called on initial render.
+    Why: Set state before the next render.
+  - shouldComponentUpdate
+    When: Immediately before render when the new props or state are being received. Not called on initial render.
+    Why: Performance. Return false to avoid unnecessary re-renders, e.g. when the data change doesn't affect the DOM.
+  - componentWillUpdate
+    When: Immediately before rendering when new props or state are being received. Not called on initial render.
+    Why: Prepare for an update. Can't call setState() in this function.
+  - componentDidUpdate
+    When: After component's updates are flushed to the DOM, i.e. when the component was re-rendered. Not called on initial render.
+    Why: Work with the DOM after an update.
+  - componentWillUnmount
+    When: Immediately before component is removed from DOM.
+    Why: Cleanup. Destroying any redundant resources or elements that were created when the component was mounted.
+
+* Keys for Dynamic Children - <tr key={author.id}>
+  When creating multiple child components dynamically, e.g. rows in a table, you need to provide a key for each child component, which is used by React to ensure the
+  other child components are properly re-ordered or destroyed. This is often the primary key for the corresponding database record, but it need not to be.
+
+
+src/api/authorApi.js - http://bit.ly/authorapi
+----
+"use strict";
+
+//This file is mocking a web API by hitting hard coded data.
+var authors = require('./authorData').authors;
+var _ = require('lodash');
+
+//This would be performed on the server in a real app. Just stubbing in.
+var _generateId = function(author) {
+  return author.firstName.toLowerCase() + '-' + author.lastName.toLowerCase();
+};
+
+var _clone = function(item) {
+  return JSON.parse(JSON.stringify(item)); //return cloned copy so that the item is passed by value instead of by reference
+};
+
+var AuthorApi = {
+  getAllAuthors: function() {
+    return _clone(authors);
+  },
+
+  getAuthorById: function(id) {
+    var author = _.find(authors, {id: id});
+    return _clone(author);
+  },
+
+  saveAuthor: function(author) {
+    //pretend an ajax call to web api is made here
+    console.log('Pretend this just saved the author to the DB via AJAX call...');
+
+    if (author.id) {
+      var existingAuthorIndex = _.indexOf(authors, _.find(authors, {id: author.id}));
+      authors.splice(existingAuthorIndex, 1, author); // splice(index, how many items to remove, item n to add)
+    } else {
+      //Just simulating creation here.
+      //The server would generate ids for new authors in a real app.
+      //Cloning so copy returned is passed by value rather than by reference.
+      author.id = _generateId(author);
+      authors.push(author);
+    }
+
+    return _clone(author);
+  },
+
+  deleteAuthor: function(id) {
+    console.log('Pretend this just deleted the author from the DB via an AJAX call...');
+    _.remove(authors, { id: id});
+  }
+};
+
+module.exports = AuthorApi;
+
+
+src/api/authorData.js - http://bit.ly/authorapidata
+----
+module.exports = {
+  authors:
+  [
+    {
+      id: 'cory-house',
+      firstName: 'Cory',
+      lastName: 'House'
+    },
+    {
+      id: 'scott-allen',
+      firstName: 'Scott',
+      lastName: 'Allen'
+    },
+    {
+      id: 'dan-wahlin',
+      firstName: 'Dan',
+      lastName: 'Wahlin'
+    }
+  ]
+};
+
+
+src/components/authors/authorPage.js
+----
+"use strict";
+
+var React = require('react');
+var AuthorApi = require('../../api/authorApi');
+
+var Authors = React.createClass({
+
+  getInitialState: function() {
+    return {
+      authors: []
+    };
+  },
+
+  componentWillMount: function() {
+    this.setState({ authors: AuthorApi.getAllAuthors() });
+  },
+
+  render: function() {
+
+    var createAuthorRow = function(author) {
+      return (
+        <tr>
+          <td><a href={"/#authors/" + author.id}>{author.id}</a></td>
+          <td>{author.firstName} {author.lastName}</td>
+        </tr>
+      );
+    };
+
+    return (
+      <div className="jumbotron">
+        <h1>Authors</h1>
+        <table className="table">
+          <thead>
+            <th>ID</th>
+            <th>Name</th>
+          </thead>
+          <tbody>
+            {this.state.authors.map(createAuthorRow, this)}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+});
+
+module.exports = Authors;
+
+
+main.js
+----
+...
+var Authors = require('./components/authors/authorPage');
+...
+      case 'authors' : Child = Authors; break;
+...
+
+
+src/components/common/header.js
+----
+...
+            <li><a href="/#authors">Authors</a></li>
+...
+
+
+
+6. React Composition
 ===================
