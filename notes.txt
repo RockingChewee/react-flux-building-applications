@@ -658,3 +658,126 @@ src/components/common/header.js
 
 6. React Composition
 ===================
+
+* Controller View
+  - top level component
+  - sets props on children
+  - interacts with stores (flux, redux)
+  - can have nested Controller Views, but it is not recommended, since there might be multiple render() invocations
+
+* Prop Validation
+  - Each PropTypes that isn't required, should have a corresponding field in getDefaultProps()
+  - PropTypes only run in the development version of React (the non-minified one), i.e. there is a special production build of React
+  - Examples:
+    optionalArray: React.PropTypes.array
+    optionalBool: React.PropTypes.bool,
+    optionalFunc: React.PropTypes.func,
+    optionalNumber: React.PropTypes.number,
+    optionalObject: React.PropTypes.optionalObject,
+    optionalString: React.PropTypes.string,
+    requiredString: React.PropTypes.string.isRequired
+
+* Mixins
+  - For handling cross-cutting functionality
+  - Share code between multiple components
+  - 'mixins' is a special property in the React components
+  - Example:
+    var ManageAuthorPage = React.createClass({
+      mixins: [
+        Router.Navigation,
+        Router.State,
+      ],
+    ...
+    });
+
+
+src/components/authors/authorList.js
+----
+"use strict";
+
+var React = require('react');
+
+var AuthorList = React.createClass({
+
+  propTypes: {
+    authors: React.PropTypes.object.isRequired
+  },
+
+  render: function() {
+
+    var createAuthorRow = function(author) {
+      return (
+        <tr>
+          <td><a href={"/#authors/" + author.id}>{author.id}</a></td>
+          <td>{author.firstName} {author.lastName}</td>
+        </tr>
+      );
+    };
+
+    return (
+      <div className="jumbotron">
+        <table className="table">
+          <thead>
+            <th>ID</th>
+            <th>Name</th>
+          </thead>
+          <tbody>
+            {this.props.authors.map(createAuthorRow, this)}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+});
+
+module.exports = AuthorList;
+
+
+src/components/authors/authorPage.js
+----
+"use strict";
+
+var React = require('react');
+var AuthorApi = require('../../api/authorApi');
+var AuthorList = require('./authorList');
+
+var AuthorPage = React.createClass({
+
+  getInitialState: function() {
+    return {
+      authors: []
+    };
+  },
+
+  componentDidMount: function() {
+    if (this.isMounted()) {
+      this.setState({ authors: AuthorApi.getAllAuthors() });
+    }
+  },
+
+  render: function() {
+
+    var createAuthorRow = function(author) {
+      return (
+        <tr>
+          <td><a href={"/#authors/" + author.id}>{author.id}</a></td>
+          <td>{author.firstName} {author.lastName}</td>
+        </tr>
+      );
+    };
+
+    return (
+      <div className="jumbotron">
+        <h1>Authors</h1>
+        <AuthorList authors={this.state.authors} />
+      </div>
+    );
+  }
+});
+
+module.exports = AuthorPage;
+
+
+
+7. React Router
+===================
