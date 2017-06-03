@@ -26,6 +26,7 @@
 >npm install --save gulp-eslint@0.15.0
 >npm install --save react@0.13.3 react-router@0.13.3 flux@2.0.3
 >npm install --save lodash
+>npm install --save toastr@2.1.0
 >npm run gulp
 
 
@@ -64,6 +65,7 @@ package.json
     "react": "^0.13.3",
     "react-router": "^0.13.3",
     "reactify": "^1.1.1",
+    "toastr": "^2.1.0",
     "vinyl-source-stream": "^1.1.0"
   }
 }
@@ -664,6 +666,7 @@ src/components/common/header.js
   - sets props on children
   - interacts with stores (flux, redux)
   - can have nested Controller Views, but it is not recommended, since there might be multiple render() invocations
+  - in other words, has to have all the "smarts" and least of "markup"
 
 * Prop Validation
   - Each PropTypes that isn't required, should have a corresponding field in getDefaultProps()
@@ -1019,4 +1022,251 @@ Router.run(routes, Router.HistoryLocation, function(Handler) {
 
 
 8. React Forms
+===================
+* Concepts to be covered:
+  - Controlled components - has to have a bound value and a change handler, as otherwise the input won't register due to one-way binding.
+  - Reusable inputs - created a generic React component wrapper for text inputs to reuse, which include input element, label and validation message placeholder.
+  - Validation - the change handler which included in the controller view and markup included in the reusable input component.
+  - Redirects - after saving the author via ReactRouter.
+  - User notifications - after saving via toastr.
+  - Dirty form - protection from navigation away via ReactRouter's willTransitionFrom.
+  - Populating on load - via ReactRouter's componentWillMount and controlled view to call AuthorApi and set state.
+  - PropTypes - protect React component API.
+
+
+src/main.js
+----
+...
+Router.run(routes, function(Handler) {
+...
+
+
+src/components/authors/manageAuthorPage.js
+----
+"use strict";
+
+var React = require('react');
+var Router = require('react-router');
+var AuthorForm = require('./authorForm');
+var AuthorApi = require('../../api/authorApi');
+var toastr = require('toastr');
+
+var ManageAuthorPage = React.createClass({
+
+  mixins: [
+    Router.Navigation // this is used in the saveAuthor handler for transitionTo() invocation
+  ],
+
+  statics: {
+    willTransitionFrom: function(transition, component) { // this prevents from navigating away if there were changes to inputs
+      if (component.state.dirty && !confirm('Leave withour saving?')) {
+        transition.abort();
+      }
+    }
+  },
+
+  getInitialState: function() {
+    return {
+      author: { id: '', firstName: '', lastName: '' },
+      errors: {},
+      dirty: false
+    };
+  },
+
+  componentWillMount: function() { // not 'componentDidMount', because we want to setState before rendering occurres
+    var authorId = this.props.params.id; // from the path '/author/:id' if routed here by 'manageAuthor' route and not 'addAuthor'
+    if (authorId) {
+      this.setState({author: AuthorApi.getAuthorById(authorId)});
+    }
+  },
+
+  // When specified as onChange event handler, this function will be called on every single key press
+  setAuthorState: function(event) {
+    this.setState({dirty: true}); // setting 'dirty' when any key pressed
+    var field = event.target.name;
+    var value = event.target.value;
+    this.state.author[field] = value;
+    return this.setState({author: this.state.author});
+  },
+
+  authorFormIsValid: function() {
+    var formIsValid = true;
+    this.state.error = {}; // clear any previous errors
+
+    if (this.state.author.firstName.length < 2) {
+      this.state.errors.firstName = 'First name must be at least 2 characters';
+      formIsValid = false;
+    } else {
+      this.state.errors.firstName = null;
+    }
+
+    if (this.state.author.lastName.length < 2) {
+      this.state.errors.lastName = 'Last name must be at least 2 characters';
+      formIsValid = false;
+    } else {
+      this.state.errors.lastName = null;
+    }
+
+    this.setState({errors: this.state.errors});
+
+    return formIsValid;
+  },
+
+  saveAuthor: function(event) {
+    event.preventDefault(); // we don't want the default browser behavior here, i.e. we are going to use JavaScript code and not browser Submit behavior
+    if (!this.authorFormIsValid()) {
+      return;
+    }
+    AuthorApi.saveAuthor(this.state.author);
+    this.setState({dirty: false}); // resetting 'dirty' flag
+    toastr.success('Author saved.'); // popup feedback message
+    this.transitionTo('authors'); // the Router.Navigation mixin is used here
+  },
+
+  render: function() {
+    return (
+      <AuthorForm
+        author={this.state.author}
+        onChange={this.setAuthorState}
+        onSave={this.saveAuthor}
+        errors={this.state.errors} />
+    );
+  }
+});
+
+module.exports = ManageAuthorPage;
+
+
+src/routes.js
+----
+...
+    <Route name="addAuthor" path="author" handler={require('./components/authors/manageAuthorPage')} />
+    <Route name="manageAuthor" path="author/:id" handler={require('./components/authors/manageAuthorPage')} />
+...
+
+
+src/components/authors/authorForm.js
+----
+"use strict";
+
+var React = require('react');
+var Input = require('../common/textInput');
+
+var AuthorForm = React.createClass({
+
+  propTypes: {
+    author: React.PropTypes.object.isRequired,
+    onSave: React.PropTypes.func.isRequired,
+    onChange: React.PropTypes.func.isRequired,
+    errors: React.PropTypes.object
+  },
+
+  render: function() {
+    return (
+      <form>
+        <h1>Manage Author</h1>
+        <Input
+          name="firstName"
+          label="First Name"
+          value={this.props.author.firstName}
+          onChange={this.props.onChange}
+          error={this.props.errors.firstName} />
+        <Input
+          name="lastName"
+          label="Last Name"
+          value={this.props.author.lastName}
+          onChange={this.props.onChange}
+          error={this.props.errors.lastName} />
+        <input type="Submit" value="Save" className="btn btn-default" onClick={this.props.onSave}/>
+      </form>
+    );
+  }
+});
+
+module.exports = AuthorForm;
+
+
+src/components/common/textInput.js
+----
+"use strict";
+
+var React = require('react');
+
+var Input = React.createClass({
+
+  propTypes: {
+    name: React.PropTypes.string.isRequired,
+    label: React.PropTypes.string.isRequired,
+    onChange: React.PropTypes.func.isRequired,
+    placeholder: React.PropTypes.string,
+    value: React.PropTypes.string,
+    error: React.PropTypes.string
+  },
+
+  render: function() {
+
+    var wrapperClass = 'form-group';
+    if (this.props.error && this.props.error.length > 0) {
+      wrapperClass += " " + 'has-error';
+    }
+
+    return (
+      <div className={wrapperClass}>
+        <label htmlFor={this.props.name}>{this.props.label}</label>
+        <div className="field">
+          <input type="text"
+            name={this.props.name}
+            className="form-control"
+            placeholder={this.props.placeholder}
+            ref={this.props.name}
+            value={this.props.value}
+            onChange={this.props.onChange}
+            />
+          <div className="input">{this.props.error}</div>
+        </div>
+      </div>
+    );
+  }
+});
+
+module.exports = Input;
+
+
+src/components/authors/authorPage.js
+----
+...
+var Router = require('react-router');
+var Link = Router.Link;
+...
+        <Link to="addAuthor" className="btn btn-default">Add Author</Link>
+...
+
+
+src/components/authors/authorList.js
+----
+...
+var Router = require('react-router');
+var Link = Router.Link;
+...
+          <td><Link to="manageAuthor" params={{id: author.id}}>{author.id}</Link></td>
+...
+
+
+gulpfile.js
+----
+...
+var config = {
+    ...
+    paths: {
+        ...
+        css: ...
+          'node_modules/toastr/toastr.css'
+        ...
+    }
+}
+...
+
+
+
+9. Flux
 ===================

@@ -12,6 +12,8 @@ var routes = (
   <Route name="app" path="/" handler={require('./components/app')}> // this is shown for each page
     <DefaultRoute handler={require('./components/homePage')}/> // if chosen, this is shown together with the root route as a sub-route
     <Route name="authors" handler={require('./components/authors/authorPage')} />
+    <Route name="addAuthor" path="author" handler={require('./components/authors/manageAuthorPage')} />
+    <Route name="manageAuthor" path="author/:id" handler={require('./components/authors/manageAuthorPage')} />
     // 'name' is the defined name of the route that is to be used in the code while referring to the route.
     // 'path' is the part of URI that corresponds to the route. It is optional attribute that can be ommitted if it matches the 'name'.
     <Route name="about" handler={require('./components/about/aboutPage')} />
