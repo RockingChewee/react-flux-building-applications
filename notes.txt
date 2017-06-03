@@ -681,14 +681,30 @@ src/components/common/header.js
   - For handling cross-cutting functionality
   - Share code between multiple components
   - 'mixins' is a special property in the React components
+
   - Example:
+
     var ManageAuthorPage = React.createClass({
       mixins: [
-        Router.Navigation,
+        Router.Navigation, // used when we want to move to another route programatically
         Router.State,
       ],
     ...
     });
+
+  - Route.Navigation mixin is useful when we want to move to another route programatically:
+
+    // Go to a new route
+    this.transitionTo('contact')
+
+    // Replace current route
+    this.replaceWith('contact')
+
+    // Go Back
+    this.goBack()
+
+    // Create a URL to a route
+    makePath(routeName, params, query)
 
 
 src/components/authors/authorList.js
@@ -780,4 +796,227 @@ module.exports = AuthorPage;
 
 
 7. React Router
+===================
+
+* Purpose is to split the application into multiple client rendered pages with deep linking.
+
+* Route configuration:
+  - Route - Declaratively map a route
+  - DefaultRoute - For URL of "/". Like "index.html"
+  - NotFoundRoute - Client-side 404
+  - Redirect - Redirect to another route
+
+* Lifecycle:
+  - main.js engages the react-router together with the routes specified in routes.js.
+    The anonymous callback function supplied specifies where in the DOM to attach the contents of the routed page (root route together with sub-route).
+  - routes.js specifies the root of routes, which is app.js. Then specifies the sub-routes, which are engaged together with root route as page and sub-page.
+  - app.js specifies how the routed content is attached via RouteHandler.
+
+* Params and Querystrings:
+
+  // Given a route like this
+  <route path="/course/:courseId" handler={course} />
+
+  // and URL like this:
+  /course/clean-code?module=3
+
+  // The component's props will be populated
+  var Course = React.createClass({
+    render: function() {
+      this.props.params.courseId; // "clean-code"
+      this.props.query.module; // "3"
+      this.props.path; // "/course/clean-code?module=3"
+    }
+  });
+
+* Links - a handy abstraction over anchores:
+  URL:    /user/1
+  Route:  <route name="user" path="/user/:userId" />
+  JSX:    <Link to="user" params={{userId: 1}}>Bobby Tables</Link>
+          The above Link points to Route by name "user" and passes to it the JSON object supplying placeholder values to generate HTML like:
+          <a href="/user/1">Bobby Tables</a>
+
+* Redirects - in case the URL is changed at some point, but we want to handle the situation:
+  Alias Redirect:     var Redirect = Router.Redirect;
+  Create a new route: <Redirect from="old-path" to="name-of-new-path" />
+
+* Handling Transitions:
+  - willTransitionTo - Determines if page should be transitioned to. Good place to check if the user is authenticated.
+    If not - we may choose to abort user transitioning to the page.
+  - willTransitionFrom - Run checks before user navigates away. Good place to check whether the form has any unsaved data, so that the user can be prompted.
+  - Example:
+    var Settings = React.createClass({
+      statics: {
+        willTransitionTo: function(transition, params, query, callback) {
+          if (!isLoggedIn) {
+            transition.abort();
+            callback();
+          }
+        },
+        willTransitionFrom: function(transition, component) {
+          if (component.formHasUnsavedData()) {
+            if (!confirm('Sure you want to leave without saving?')) {
+              transition.abort();
+            }
+          }
+        }
+      }
+      // ...
+    });
+
+* Locations:
+  - Hash Location (default) - yourUrl.com#/courses
+    ~ (-) Ugly URLs
+    ~ (+) Works in all browsers
+    ~ (-) Not compatible with server-render
+  - History Location - yourUrl.com/courses
+    ~ (+) Clean URLs
+    ~ (-) IE10+
+    ~ (+) Works for server-render
+    ~ (-) In order for this type of routing to work, the initial request to the website must be to the clientside index page. Can be fixed by using redirect on a webserver.
+    This uses HTML5 History API's push state, replace state and pop state to change our History.
+
+
+src/routes.js
+----
+"use strict";
+
+var React = require('react');
+
+var Router = require('react-router');
+var DefaultRoute = Router.DefaultRoute;
+var Route = Router.Route;
+var NotFoundRoute = Router.NotFoundRoute;
+var Redirect = Router.Redirect;
+
+var routes = (
+  <Route name="app" path="/" handler={require('./components/app')}> // this is shown for each page
+    <DefaultRoute handler={require('./components/homePage')}/> // if chosen, this is shown together with the root route as a sub-route
+    <Route name="authors" handler={require('./components/authors/authorPage')} />
+    // 'name' is the defined name of the route that is to be used in the code while referring to the route.
+    // 'path' is the part of URI that corresponds to the route. It is optional attribute that can be ommitted if it matches the 'name'.
+    <Route name="about" handler={require('./components/about/aboutPage')} />
+    <NotFoundRoute handler={require('./components/notFoundPage')}/>
+    <Redirect from="about-us" to="about" /> // if the URL was renamed
+    <Redirect from="awthurs" to="authors" /> // to handle potential typos if needed
+    <Redirect from="about/*" to="about" /> 'from' can also contain special characters, like '*'
+  </Route>
+);
+
+module.exports = routes;
+
+
+src/components/app.js
+----
+/* eslint-disable strict */ //Disabling check because we can't run strict mode. Need global vars.
+
+var React = require('react');
+var Header = require('./common/header');
+var RouteHandler = require('react-router').RouteHandler;
+
+$ = jQuery = require('jquery'); // Bootstrap expects jquery to be in a global namespace
+
+var App = React.createClass({
+  render: function() {
+    return (
+      <div>
+        <Header/>
+        <div className="container-fluid">
+          <RouteHandler/>
+        </div>
+      </div>
+    );
+  }
+});
+
+module.exports = App;
+
+
+src/components/common/header.js
+----
+...
+var Router = require('react-router');
+var Link = Router.Link;
+...
+        <div className="container-fluid">
+          <Link to="app" className="navbar-brand">
+            <img src="images/pluralsight-logo.png" />
+          </Link>
+          <ul className="nav navbar-nav">
+            <li><Link to="app">Home</Link></li>
+            <li><Link to="authors">Authors</Link></li>
+            <li><Link to="about">About</Link></li>
+          </ul>
+        </div>
+...
+
+
+src/components/notFoundPage.js
+----
+"use strict";
+
+var React = require('react');
+var Link = require('react-router').Link;
+
+var NotFoundPage = React.createClass({
+  render: function() {
+    return (
+      <div>
+        <h1>Page Not Found</h1>
+        <p>Whoops! Sorry, there is nothing to see here.</p>
+        <p><Link to="app">Back to Home</Link></p>
+      </div>
+    );
+  }
+});
+
+module.exports = NotFoundPage;
+
+
+src/components/homePage.js
+----
+...
+var Router = require('react-router');
+var Link = Router.Link;
+...
+        <Link to="about" className="btn btn-primary btn-lg">Learn more</Link>
+...
+
+
+src/components/about/aboutPage.js
+----
+...
+  statics: {
+    willTransitionTo: function(transition, params, query, callback) {
+      if (!confirm('Are you sure you want to read a page that\'s this boring?')) {
+        transition.abort(); // this is fired once unless the page is reloaded...
+      } else {
+        callback();
+      }
+    },
+    willTransitionFrom: function(transition, component) {
+      if (!confirm('Are you sure you want to leave a page that\'s this exciting?')) {
+        transition.abort();
+      }
+    }
+  },
+...
+
+
+src/main.js
+----
+"use strict";
+
+var React = require('react');
+var Router = require('react-router');
+var routes = require('./routes');
+
+// Passing the additional Router.HistoryLocation argument switches the Location engine from Hash (default) to History (HTML5 History API)
+Router.run(routes, Router.HistoryLocation, function(Handler) {
+  React.render(<Handler />, document.getElementById('app'));
+});
+
+
+
+8. React Forms
 ===================
