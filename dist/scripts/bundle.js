@@ -49814,7 +49814,7 @@ var toastr = require('toastr');
 var ManageAuthorPage = React.createClass({displayName: "ManageAuthorPage",
 
   mixins: [
-    Router.Navigation // this is used in the saveAuthor handler for transitionTo() invocation
+    Router.Navigation // this is used in the saveAuthor() handler for transitionTo() invocation
   ],
 
   statics: {

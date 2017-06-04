@@ -484,8 +484,9 @@ gulp.task('images', function() {
     ~ Holds mutable state of the React component.
       Strive to use it only in the Controller View, i.e. only use state on a top level component and pass data down to child components via props.
     ~ getInitialState() - an optional function which sets the initial state for the component, typically in the top level component called Controller View.
+      This is the only place where it is possible to assign to this.state directly. Everywhere else this.setState() is used.
 
-* React Component Lifecycle:
+* React Component Lifecycle functions:
   - componentWillMount
     When: Before initial render, both client and server.
     Why: Good spot to set initial state.
@@ -507,6 +508,12 @@ gulp.task('images', function() {
   - componentWillUnmount
     When: Immediately before component is removed from DOM.
     Why: Cleanup. Destroying any redundant resources or elements that were created when the component was mounted.
+
+* Lifecycle sequences:
+  - Initialization - getDefaultProps() ==> getInitialState() ==> componentWillMount() ==> render() ==> componentDidMount()
+  - State changes - shouldComponentUpdate() ==> componentWillUpdate() ==> render() ==> componentDidUpdate()
+  - Props changes - componentWillReceiveProps() ==> shouldComponentUpdate() ==> componentWillUpdate() ==> render() ==> componentDidUpdate()
+  - Unmounting - componentWillUnmount()
 
 * Keys for Dynamic Children - <tr key={author.id}>
   When creating multiple child components dynamically, e.g. rows in a table, you need to provide a key for each child component, which is used by React to ensure the
@@ -663,8 +670,9 @@ src/components/common/header.js
 
 * Controller View
   - top level component
-  - sets props on children
-  - interacts with stores (flux, redux)
+  - interacts with data stores (Flux, Redux)
+  - holds the data in it's state
+  - passes the state as props down to child components
   - can have nested Controller Views, but it is not recommended, since there might be multiple render() invocations
   - in other words, has to have all the "smarts" and least of "markup"
 
@@ -1269,4 +1277,96 @@ var config = {
 
 
 9. Flux
+===================
+
+* Flux is not a framework, it is an architectural pattern for unidirectional data flows.
+  All updates to an application state occurres in a centralized dispatcher, which dispatches the application data to the data stores.
+  Flux deals with actions and data changes.
+
+* Flux implementations - Facebook's Flux, Alt, Reflux, Flummox, Marty, Fluxxor, Delorean, Redux, NuclearJS, Fluxible.
+
+* Unidirectional data flows explained:
+  - Concept:
+    Action ==> Dispatcher ==> Store ==> React View
+    ~ When Action occurres, the Dispatcher notifies any stores that are registered in a dispatcher that an action has occurred.
+    ~ When the Store changes, the React View is updated so that the user can see the updated UI.
+    ~ When the user interacts with the UI element, a new action occurres and this unidirectional flow starts over.
+
+* 3 core Flux concepts - closer look:
+
+  - Actions
+    ~ Encapsulate the specific events that occur in the application - save user, delete item, etc.
+    ~ The Dispatcher exposes a method that allows us to trigger a dispatch to the stores and to include a payload of data which is called an Action.
+    ~ Action Creators are the Dispatcher Helper Methods and they describe all the actions that are possible in the application.
+    ~ Actions can be triggered in 2 different places: when user interacts with UI or from the server (page load, error occurres during calls to the server).
+    ~ The action related functions are usually grouped together in files that have related actions - create course, rate course, etc.
+    ~ Action Creator Methods add a Type that is stored in the Constants file.
+      This type is used by a dispatcher to properly handle the action and pass updates to related Stores.
+    ~ Action Payload structure - type and data:
+      {
+        type: USER_SAVED,
+        data: {
+          firstName: 'Cory',
+          lastName: 'House'
+        }
+      }
+
+  - Dispatcher
+    ~ Acts as a Central Hub and all data flows goes through it. It is a singleton, i.e. there is only one Dispatcher per application.
+    ~ Stores register with the Dispatcher so that they can be notified when the data changes, so the Dispatcher simply holds a list of callbacks.
+    ~ The Dispatcher invokes the callbacks that have been registered with it and it broadcasts the payload that it receives from the Action.
+    ~ Invocation of callbacks dispatches the Actions to the relevant Stores.
+    ~ With Flux it is helpful to create a Constans file to keep things organized and to get a high level view on what the application does.
+
+  - Stores
+    ~ Holds application data, logic, data retrieval methods.
+    ~ It is not a Model, but it contains Models.
+    ~ An application can have a single store, but the the application gets larger, it is useful to have multiple.
+    ~ Stores get updated because they have callbacks that are registred with a Dispatcher.
+    ~ Only the Stores are allowed to register dispatcher callbacks, i.e. the React component should never try to register with the dispatcher directly.
+    ~ Flux stores are extended with Node's EventEmitter, which allows the Stores to both Listen to and Broadcast events.
+      This also allows our React components to update based on those events, since our React components listen to our Stores.
+    ~ Stores have no direct set or methods, but instead they only accept updates vis callbacks that are registered with the Dispatcher.
+    ~ The Store's the only thing in an application that knows how to update the data. This is the most important part of Flux.
+      The event that Dispatcher dispatches doesn't know how to add or remove items, but only the Store knows how.
+    ~ The Structure of a Store:
+      1. Extend EventEmitter - emitted events is a way to notify the React components that the data has changed.
+      2. addChangeListener() and removeChangeListener() - expose adding and removing change listeners for the particular React component to get notified of the Store changes.
+      3. emitChange() - method that actually emmits the change.
+    ~ Example with 3 data stores: Dispatcher ==> Payload ==> User Store / Address Store / Product Store
+      In this case the Dispatcher will send the Action Payload to all 3 of these Stores in parallel.
+      The Dispatcher can be used to manage dependencies between the Stores by invoking the registered callbacks in a specific order by using waitFor() API.
+
+* Flux flow in detail:
+  - Action - The flow begins when the user did something in the UI, e.g. clicked "Save User" button. Actions commonly make Ajax calls to other web API's.
+  - Send Action Payload - Payload is sent to Dispatcher. Payload always has the same structure - type and data, e.g.:
+    { type: USER_SAVED, data: {firstName: 'Cory', lastName: 'House'} }
+  - Dispatcher - Checks its list of registered callbacks to determine which stores should receive the Payload.
+  - Send Action Payload - Sends payload to all registered callbacks from stores by Action Payload type.
+  - Store - Receives Payload and updates the Store's data based on Action Payload.
+  - Updates storage and fires change event - Once the Store is done processing the update, it emits a change event.
+  - React View - Receives change event and re-renders. Any UI activities may generate a new Action and cause this unidirectional flow to start all over again.
+
+* A chat with Flux:
+  - React      - Hey CourseAction, someone clicked this "Save Course" button.
+  - Action     - Thanks React! I registered an action creator with the dispatcher, so the dispatcher should take care of notifying all the stores that care.
+  - Dispatcher - Let me see who cares about course being saved. Ah! Looks like the CourseStore has registered a callback with me, so I'll let her know.
+  - Store      - Hi dispatcher! Thanks for the update! I'll update my data with the payload you sent. Then I'll emitan event for the React components that care.
+  - React      - Ooo! Shiny new data from the store! I'll update the UI to reflect this!
+
+* Flux API:
+  - register(function callback) - "Hey dispatcher, run me when action happen. - Store"
+  - unregister(string id) - "Hey dispatcher, stop worrying about this action. - Store"
+  - waitFor(array<string> id) - "Update this store first. - Store"
+    A way to run callbacks in a specific order. The array holds the dispatch tokens of the callbacks that have to be completed in order for the current one to proceed.
+  - dispatch(object payload) - "Hey dispatcher, tell the stores about this action. - Action"
+  - isDispatching() - "I'm busy dispatching callbacks right now. - Dispatcher"
+
+* Flux is not a Publish-Subscribe model and differs in 2 ways:
+  - Every Payload is dispatched to all registered callbacks.
+  - Callbacks can wait for other callbacks to complete before proceeding processing the current one.
+
+
+
+10. Flux Demos
 ===================
