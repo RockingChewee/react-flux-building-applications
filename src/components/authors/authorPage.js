@@ -3,33 +3,37 @@
 var React = require('react');
 var Router = require('react-router');
 var Link = Router.Link;
-var AuthorApi = require('../../api/authorApi');
+var AuthorStore = require('../../stores/authorStore');
+var AuthorActions = require('../../actions/authorActions');
 var AuthorList = require('./authorList');
 
 var AuthorPage = React.createClass({
 
   getInitialState: function() {
     return {
-      authors: []
+      // No need to check if there are authors or not anymore, since we trust the store to retrieve either list of authors or an empty list.
+      // Hence there is no need for the componentDidMount() function anymore as well.
+      authors: AuthorStore.getAllAuthors()
     };
   },
 
-  componentDidMount: function() {
-    if (this.isMounted()) {
-      this.setState({ authors: AuthorApi.getAllAuthors() });
-    }
+  // Both componentWillMount() and componentWillUnmount() functions required when the store is updated, but it is needed to stay on the same page.
+  // These will be used for deleting an author only, since adding/updating an author redirects us to author list page.
+  componentWillMount: function() {
+    AuthorStore.addChangeListener(this._onChange);
+  },
+
+  // Clean up when this component is unmounted.
+  componentWillUnmount: function() {
+    AuthorStore.removeChangeListener(this._onChange);
+  },
+
+  _onChange: function() {
+    //debugger;
+    this.setState({ authors: AuthorStore.getAllAuthors() });
   },
 
   render: function() {
-
-    var createAuthorRow = function(author) {
-      return (
-        <tr>
-          <td><a href={"/#authors/" + author.id}>{author.id}</a></td>
-          <td>{author.firstName} {author.lastName}</td>
-        </tr>
-      );
-    };
 
     return (
       <div className="jumbotron">

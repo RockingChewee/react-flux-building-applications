@@ -3,7 +3,8 @@
 var React = require('react');
 var Router = require('react-router');
 var AuthorForm = require('./authorForm');
-var AuthorApi = require('../../api/authorApi');
+var AuthorActions = require('../../actions/authorActions');
+var AuthorStore = require('../../stores/authorStore');
 var toastr = require('toastr');
 
 var ManageAuthorPage = React.createClass({
@@ -31,7 +32,7 @@ var ManageAuthorPage = React.createClass({
   componentWillMount: function() { // not 'componentDidMount', because we want to setState before rendering occurres
     var authorId = this.props.params.id; // from the path '/author/:id' if routed here by 'manageAuthor' route and not 'addAuthor'
     if (authorId) {
-      this.setState({author: AuthorApi.getAuthorById(authorId)});
+      this.setState({author: AuthorStore.getAuthorById(authorId)});
     }
   },
 
@@ -72,9 +73,13 @@ var ManageAuthorPage = React.createClass({
     if (!this.authorFormIsValid()) {
       return;
     }
-    AuthorApi.saveAuthor(this.state.author);
+    if (this.state.author.id) {
+      AuthorActions.updateAuthor(this.state.author);
+    } else {
+      AuthorActions.createAuthor(this.state.author);
+    }
     this.setState({dirty: false}); // resetting 'dirty' flag
-    toastr.success('Author saved.'); // popup feedback message
+    toastr.success('Author Saved'); // popup feedback message
     this.transitionTo('authors'); // the Router.Navigation mixin is used here
   },
 
