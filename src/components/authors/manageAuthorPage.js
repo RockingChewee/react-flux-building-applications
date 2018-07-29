@@ -15,7 +15,7 @@ var ManageAuthorPage = React.createClass({
 
   statics: {
     willTransitionFrom: function(transition, component) { // this prevents from navigating away if there were changes to inputs
-      if (component.state.dirty && !confirm('Leave withour saving?')) {
+      if (component.state.dirty && !confirm('Leave without saving?')) {
         transition.abort();
       }
     }

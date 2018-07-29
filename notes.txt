@@ -44,14 +44,14 @@ package.json
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RockingChewee/react-flux-building-applications.git"
+    "url": "git+https://github.com/aleksf0/react-flux-building-applications.git"
   },
   "author": "Aleksandr Fokin",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/RockingChewee/react-flux-building-applications/issues"
+    "url": "https://github.com/aleksf0/react-flux-building-applications/issues"
   },
-  "homepage": "https://github.com/RockingChewee/react-flux-building-applications#readme",
+  "homepage": "https://github.com/aleksf0/react-flux-building-applications#readme",
   "dependencies": {
     "bootstrap": "^3.3.5",
     "browserify": "^11.0.1",
@@ -152,7 +152,7 @@ gulp.task('watch', function() {
 gulp.task('default', ['html', 'js', 'css', 'lint', 'open', 'watch']);
 
 
-index.HTML
+index.html
 ----
 <!DOCTYPE html>
 <html lang="en">
@@ -238,7 +238,7 @@ trim_trailing_whitespace = false
 
 * React and MVC
   - In actuality, a well composed React components fulfil both V and C, called Controller Views.
-    Controller Views promote reuse and separation of concern.
+    Controller Views promote reuse and separation of concerns.
 
 * The risk of two-way binding (used by alternatives e.g. Knockout, Angular, ember)
 
@@ -1355,7 +1355,7 @@ var config = {
   - React      - Hey CourseAction, someone clicked this "Save Course" button.
   - Action     - Thanks React! I registered an action creator with the dispatcher, so the dispatcher should take care of notifying all the stores that care.
   - Dispatcher - Let me see who cares about course being saved. Ah! Looks like the CourseStore has registered a callback with me, so I'll let her know.
-  - Store      - Hi dispatcher! Thanks for the update! I'll update my data with the payload you sent. Then I'll emitan event for the React components that care.
+  - Store      - Hi dispatcher! Thanks for the update! I'll update my data with the payload you sent. Then I'll emit an event for the React components that care.
   - React      - Ooo! Shiny new data from the store! I'll update the UI to reflect this!
 
 * Flux API:

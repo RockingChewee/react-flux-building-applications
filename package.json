@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RockingChewee/react-flux-building-applications.git"
+    "url": "git+https://github.com/aleksf0/react-flux-building-applications.git"
   },
   "author": "Aleksandr Fokin",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/RockingChewee/react-flux-building-applications/issues"
+    "url": "https://github.com/aleksf0/react-flux-building-applications/issues"
   },
-  "homepage": "https://github.com/RockingChewee/react-flux-building-applications#readme",
+  "homepage": "https://github.com/aleksf0/react-flux-building-applications#readme",
   "dependencies": {
     "bootstrap": "^3.3.5",
     "browserify": "^11.0.1",
